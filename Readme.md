@@ -48,6 +48,7 @@ To learn more about the war and how you can help, [click here](https://tyrrrz.me
 - Comprehensive auto-generated help text
 - Support for deeply nested command hierarchies
 - Graceful cancellation via interrupt signals
+- Shell completion for PowerShell, Bash, and Zsh, with support for dynamic suggestions
 - Support for reading and writing binary data
 - Testable console interaction layer
 - Compatible with Native AOT and trimming
@@ -957,6 +958,7 @@ Here is the full list of configuration methods available on `CommandLineApplicat
 - `UseConsole(...)` — provides a custom `IConsole` implementation, useful for [testing](#testing).
 - `UseTypeInstantiator(...)` — provides a custom type instantiator for creating command instances. See [dependency injection](#dependency-injection).
 - `AllowDebugMode(...)` / `AllowPreviewMode(...)` — enables diagnostic modes. See [debug and preview mode](#debug-and-preview-mode).
+- `AllowCompletion(...)` — enables shell completion. See [shell completion](#shell-completion).
 
 #### Dependency injection
 
@@ -1058,6 +1060,105 @@ public static async Task<int> Main() =>
         .Build()
         .RunAsync();
 ```
+
+### Shell completion
+
+**CliFx** can provide tab completion for your application in PowerShell, Bash, and Zsh.
+It is opt-in — enable it with `AllowCompletion()`:
+
+```csharp
+public static async Task<int> Main() =>
+    await new CommandLineApplicationBuilder()
+        .AddCommandsFromThisAssembly()
+        .AllowCompletion()
+        .Build()
+        .RunAsync();
+```
+
+This adds two directives to your application.
+The first one prints a script that registers the application with the shell:
+
+```powershell
+# PowerShell
+myapp '[completion]' powershell | Out-String | Invoke-Expression
+```
+
+```bash
+# Bash
+source <(myapp '[completion]' bash)
+```
+
+```zsh
+# Zsh (after compinit)
+source <(myapp '[completion]' zsh)
+```
+
+> [!NOTE]
+> CliFx only generates the script. Where to put it (shell profile, installer, package, etc.) is up to your application.
+> To persist it, save the output to a file and load that file from the profile, instead of running the application on every shell startup.
+
+The second directive, `myapp [suggest] "<text typed up to the cursor>"`, is what the script calls on each <kbd>Tab</kbd> press.
+It prints one suggestion per line as `value<TAB>display text<TAB>description`, and it never prompts for input or prints errors.
+
+Out of the box, the following are suggested based on the command metadata:
+
+- Command names, including the next word of multi-word names (`book` → `add`, `list`, `remove`)
+- Option names (`--name`) and short names (`-n`), skipping those that have already been used
+- Members of enums for parameters and options of an enum type
+
+#### Custom completion providers
+
+For values that are only known at run time, implement `ICompletionProvider` and attach it to a parameter or an option through the `CompletionProvider` property:
+
+```csharp
+public class DeviceCompletionProvider(DeviceApiClient api) : ICompletionProvider
+{
+    public async ValueTask<IReadOnlyList<CompletionItem>> GetCompletionsAsync(
+        CompletionContext context,
+        CancellationToken cancellationToken
+    )
+    {
+        // Let the API do the filtering by what the user has typed so far
+        var devices = await api.SearchDevicesAsync(context.WordToComplete, cancellationToken);
+
+        return devices
+            .Select(d => new CompletionItem(
+                // Inserted into the command line
+                d.Id,
+                // Shown in the list of suggestions (shells that support it)
+                d.Name,
+                // Shown next to the suggestion (shells that support it)
+                d.Description
+            ))
+            .ToArray();
+    }
+}
+
+[Command("device")]
+public partial class DeviceCommand : ICommand
+{
+    [CommandParameter(0, CompletionProvider = typeof(DeviceCompletionProvider))]
+    public required string DeviceId { get; set; }
+
+    // ...
+}
+```
+
+Providers are created through the [type instantiator](#dependency-injection), so they can use the same dependencies as commands (authentication state, API clients, caches, and so on).
+Keep in mind that:
+
+- Suggestions are calculated in a new process on every key press, so providers need to be fast.
+  Calculation is abandoned after a timeout, which is 3 seconds by default and can be changed with `AllowCompletion(TimeSpan)`.
+- Providers should return an empty list when suggestions are not available (e.g., the user is not signed in) — exceptions thrown by providers are swallowed.
+  Never prompt for input from a provider.
+- Suggestions are not filtered by the framework, so use `CompletionContext.WordToComplete` to narrow them down.
+- Any caching is up to the application, and since the process is short-lived, it has to be persistent rather than in-memory.
+  Scope it to the current user, give it a short lifetime, and invalidate it on sign-out.
+
+See [`CliFx.Demo.Fleet`](CliFx.Demo.Fleet) for a complete example, with a provider that queries a REST API on behalf of the signed-in user.
+
+> [!NOTE]
+> PowerShell doesn't call completers for bare `-` and `--` in Windows PowerShell 5.1, and CMD is not supported at all.
 
 ## Etymology
 

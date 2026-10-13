@@ -48,6 +48,16 @@ public static class DiagnosticDescriptors
             true
         );
 
+    public static DiagnosticDescriptor CommandInputCompletionProviderMustImplementInterface { get; } =
+        new(
+            $"{nameof(CliFx)}_{nameof(CommandInputCompletionProviderMustImplementInterface)}",
+            "Input completion provider must implement ICompletionProvider",
+            "Input bound to property '{0}' specifies completion provider '{1}' which does not implement 'ICompletionProvider'. Completion providers must implement the 'CliFx.Completion.ICompletionProvider' interface.",
+            "CliFx",
+            DiagnosticSeverity.Error,
+            true
+        );
+
     // Parameter
 
     public static DiagnosticDescriptor CommandParameterMustHaveUniqueOrder { get; } =

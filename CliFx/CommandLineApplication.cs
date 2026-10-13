@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CliFx.Activation;
 using CliFx.Binding;
+using CliFx.Completion;
 using CliFx.Help;
 using CliFx.Infrastructure;
 using CliFx.Parsing;
@@ -151,6 +153,78 @@ public class CommandLineApplication(
         }
     }
 
+    // Handles "[suggest] <text>": prints suggestions for the text typed up to the cursor.
+    // This is invoked by the shell on every completion request, so it must never fail loudly,
+    // never prompt for input, and never take long.
+    private async ValueTask<int> RunSuggestAsync(
+        CommandRootDescriptor root,
+        IReadOnlyList<string> commandLineArguments,
+        IReadOnlyDictionary<string, string> environmentVariables
+    )
+    {
+        try
+        {
+            var engine = new CompletionEngine(root, typeInstantiator, environmentVariables);
+
+            using var cancellationSource = new CancellationTokenSource(
+                configuration.CompletionTimeout
+            );
+
+            // Don't rely on providers to respect the token
+            var task = engine
+                .GetCompletionsAsync(
+                    commandLineArguments.Count > 1 ? commandLineArguments[1] : "",
+                    cancellationSource.Token
+                )
+                .AsTask();
+
+            var timeoutTask = Task.Delay(Timeout.Infinite, cancellationSource.Token);
+            if (await Task.WhenAny(task, timeoutTask) != task)
+                return 0;
+
+            foreach (var item in await task)
+            {
+                // Fields are tab-separated and entries are line-separated
+                static string Sanitize(string? value) =>
+                    (value ?? "").Replace('\t', ' ').Replace('\r', ' ').Replace('\n', ' ');
+
+                // Always terminate with \n regardless of the platform, because shell scripts expect it
+                console.Output.Write(
+                    string.Join(
+                        '\t',
+                        Sanitize(item.Value),
+                        Sanitize(item.Display),
+                        Sanitize(item.Description)
+                    ) + '\n'
+                );
+            }
+        }
+        catch
+        {
+            // Failing to provide suggestions is not an error from the shell's perspective
+        }
+
+        return 0;
+    }
+
+    // Handles "[completion] <shell>": prints the integration script for the specified shell.
+    private int RunCompletionScript(IReadOnlyList<string> commandLineArguments)
+    {
+        var shell = commandLineArguments.Count > 1 ? commandLineArguments[1] : "";
+
+        if (!CompletionScripts.TryGet(shell, metadata.ExecutableName, out var script))
+        {
+            console.Error.WriteLine(
+                $"Unsupported shell '{shell}'. Supported shells: powershell, bash, zsh."
+            );
+
+            return 1;
+        }
+
+        console.Output.Write(script + '\n');
+        return 0;
+    }
+
     /// <summary>
     /// Runs the application with the specified command-line arguments and environment variables.
     /// Returns the exit code which indicates whether the application completed successfully.
@@ -168,6 +242,17 @@ public class CommandLineApplication(
         try
         {
             var root = new CommandRootDescriptor(configuration.Commands);
+
+            // Handle completion directives
+            if (configuration.IsCompletionEnabled && commandLineArguments.Count > 0)
+            {
+                if (commandLineArguments[0] == "[suggest]")
+                    return await RunSuggestAsync(root, commandLineArguments, environmentVariables);
+
+                if (commandLineArguments[0] == "[completion]")
+                    return RunCompletionScript(commandLineArguments);
+            }
+
             var commandLine = ParsedCommandLine.Parse(commandLineArguments, root.GetCommandNames());
 
             return await RunAsync(root, commandLine, environmentVariables);

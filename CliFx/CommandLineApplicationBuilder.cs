@@ -23,6 +23,9 @@ public partial class CommandLineApplicationBuilder
     private string? _debugModeEnvironmentVariable;
     private string? _previewModeEnvironmentVariable;
 
+    private bool _isCompletionEnabled;
+    private TimeSpan? _completionTimeout;
+
     private IConsole? _console;
     private ITypeInstantiator? _typeInstantiator;
 
@@ -124,6 +127,31 @@ public partial class CommandLineApplicationBuilder
     public CommandLineApplicationBuilder AllowPreviewMode() => AllowPreviewMode("CLIFX_PREVIEW");
 
     /// <summary>
+    /// Enables shell completion.
+    /// When enabled, the application handles the <c>[completion] &lt;shell&gt;</c> directive, which prints
+    /// a script that integrates the application with the specified shell (<c>powershell</c>, <c>bash</c> or <c>zsh</c>),
+    /// as well as the <c>[suggest] &lt;text&gt;</c> directive, which the printed script uses to retrieve suggestions.
+    /// </summary>
+    /// <remarks>
+    /// Suggestions are calculated from the command metadata and from the completion providers
+    /// specified on command inputs (see <see cref="Binding.CommandInputAttribute.CompletionProvider" />).
+    /// Calculating suggestions is abandoned after the specified timeout.
+    /// </remarks>
+    public CommandLineApplicationBuilder AllowCompletion(TimeSpan timeout)
+    {
+        _isCompletionEnabled = true;
+        _completionTimeout = timeout;
+        return this;
+    }
+
+    /// <inheritdoc cref="AllowCompletion(TimeSpan)" />
+    public CommandLineApplicationBuilder AllowCompletion()
+    {
+        _isCompletionEnabled = true;
+        return this;
+    }
+
+    /// <summary>
     /// Configures the application to use the specified implementation of <see cref="IConsole" />.
     /// </summary>
     public CommandLineApplicationBuilder UseConsole(IConsole console)
@@ -178,7 +206,9 @@ public partial class CommandLineApplicationBuilder
         var configuration = new CommandLineApplicationConfiguration(
             [.. _commands],
             _debugModeEnvironmentVariable,
-            _previewModeEnvironmentVariable
+            _previewModeEnvironmentVariable,
+            _isCompletionEnabled,
+            _completionTimeout
         );
 
         return new CommandLineApplication(

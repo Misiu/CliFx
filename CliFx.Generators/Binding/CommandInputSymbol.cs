@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using CliFx.Generators.Utils;
 using CliFx.Generators.Utils.Extensions;
 using Microsoft.CodeAnalysis;
 using PowerKit.Extensions;
@@ -11,7 +12,8 @@ internal abstract partial record CommandInputSymbol(
     bool IsRequired,
     string? Description,
     INamedTypeSymbol? ConverterType,
-    IReadOnlyList<INamedTypeSymbol> ValidatorTypes
+    IReadOnlyList<INamedTypeSymbol> ValidatorTypes,
+    INamedTypeSymbol? CompletionProviderType
 )
 {
     // Technically, we should be checking if IInputConverter.CanConvertSequence is true,
@@ -35,6 +37,32 @@ internal partial record CommandInputSymbol
     protected static INamedTypeSymbol? TryResolveConverterType(AttributeData attribute) =>
         attribute.NamedArguments.FirstOrDefault(a => a.Key == "Converter").Value.Value
         as INamedTypeSymbol;
+
+    protected static INamedTypeSymbol? TryResolveCompletionProviderType(
+        AttributeData attribute,
+        IPropertySymbol property,
+        DiagnosticReporter diagnostics
+    )
+    {
+        var providerType =
+            attribute.NamedArguments.FirstOrDefault(a => a.Key == "CompletionProvider").Value.Value
+            as INamedTypeSymbol;
+
+        if (
+            providerType is not null
+            && !providerType.Implements("CliFx.Completion.ICompletionProvider")
+        )
+        {
+            diagnostics.Report(
+                DiagnosticDescriptors.CommandInputCompletionProviderMustImplementInterface,
+                property.Locations.FirstOrDefault(),
+                property.Name,
+                providerType.GetGloballyQualifiedName()
+            );
+        }
+
+        return providerType;
+    }
 
     protected static INamedTypeSymbol[] ResolveValidatorTypes(AttributeData attribute) =>
         attribute

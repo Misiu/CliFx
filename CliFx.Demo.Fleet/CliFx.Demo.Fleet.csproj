@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>fleet</AssemblyName>
+    <RootNamespace>CliFx.Demo.Fleet</RootNamespace>
+    <ApplicationIcon>../favicon.ico</ApplicationIcon>
+
+    <!-- Every Tab press launches a new process, so startup time directly affects how responsive completion feels -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TieredPGO>false</TieredPGO>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpier.MsBuild" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CliFx/CliFx.csproj" />
+    <ProjectReference
+      Include="../CliFx.Generators/CliFx.Generators.csproj"
+      ReferenceOutputAssembly="false"
+      OutputItemType="analyzer"
+    />
+  </ItemGroup>
+</Project>

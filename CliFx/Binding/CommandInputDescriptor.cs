@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using CliFx.Activation;
 
 namespace CliFx.Binding;
@@ -11,7 +13,9 @@ public abstract class CommandInputDescriptor(
     bool isRequired,
     string? description,
     IInputConverter converter,
-    IReadOnlyList<IInputValidator> validators
+    IReadOnlyList<IInputValidator> validators,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+        Type? completionProviderType = null
 )
 {
     /// <summary>
@@ -38,6 +42,10 @@ public abstract class CommandInputDescriptor(
     /// Validators used to validate the converted value before setting it to the target property.
     /// </summary>
     public IReadOnlyList<IInputValidator> Validators { get; } = validators;
+
+    /// <inheritdoc cref="CommandInputAttribute.CompletionProvider" />
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+    public Type? CompletionProviderType { get; } = completionProviderType;
 }
 
 /// <inheritdoc cref="CommandInputDescriptor" />
@@ -49,6 +57,16 @@ public abstract class CommandInputDescriptor<TCommand, TProperty>(
     bool isRequired,
     string? description,
     IInputConverter<TProperty> converter,
-    IReadOnlyList<IInputValidator<TProperty>> validators
-) : CommandInputDescriptor(property, isRequired, description, converter, validators)
+    IReadOnlyList<IInputValidator<TProperty>> validators,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+        Type? completionProviderType = null
+)
+    : CommandInputDescriptor(
+        property,
+        isRequired,
+        description,
+        converter,
+        validators,
+        completionProviderType
+    )
     where TCommand : ICommand;

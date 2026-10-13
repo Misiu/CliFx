@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using CliFx.Activation;
 
@@ -14,8 +16,18 @@ public class CommandParameterDescriptor(
     bool isRequired,
     string? description,
     IInputConverter converter,
-    IReadOnlyList<IInputValidator> validators
-) : CommandInputDescriptor(property, isRequired, description, converter, validators)
+    IReadOnlyList<IInputValidator> validators,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+        Type? completionProviderType = null
+)
+    : CommandInputDescriptor(
+        property,
+        isRequired,
+        description,
+        converter,
+        validators,
+        completionProviderType
+    )
 {
     /// <inheritdoc cref="CommandParameterAttribute.Order" />
     public int Order { get; } = order;
@@ -59,7 +71,9 @@ public class CommandParameterDescriptor<TCommand, TProperty>(
     bool isRequired,
     string? description,
     IInputConverter<TProperty> converter,
-    IReadOnlyList<IInputValidator<TProperty>> validators
+    IReadOnlyList<IInputValidator<TProperty>> validators,
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+        Type? completionProviderType = null
 )
     : CommandParameterDescriptor(
         property,
@@ -68,6 +82,7 @@ public class CommandParameterDescriptor<TCommand, TProperty>(
         isRequired,
         description,
         converter,
-        validators
+        validators,
+        completionProviderType
     )
     where TCommand : ICommand;

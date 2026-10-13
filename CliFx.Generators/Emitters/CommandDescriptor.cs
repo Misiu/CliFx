@@ -31,6 +31,11 @@ internal static class CommandDescriptor
                 """;
     }
 
+    private static string EmitCompletionProvider(INamedTypeSymbol? completionProviderType) =>
+        completionProviderType is not null
+            ? $"typeof({completionProviderType.GetGloballyQualifiedName()})"
+            : "null";
+
     private static string? TryEmitDefaultScalarConverter(ITypeSymbol type)
     {
         // Object
@@ -269,7 +274,8 @@ internal static class CommandDescriptor
                 {{EmitValidators(
                 parameter.ValidatorTypes,
                 parameter.Property.Type.GetGloballyQualifiedName()
-            )}}
+            )}},
+                {{EmitCompletionProvider(parameter.CompletionProviderType)}}
             )
             """;
     }
@@ -310,7 +316,8 @@ internal static class CommandDescriptor
                 {{EmitValidators(
                 option.ValidatorTypes,
                 option.Property.Type.GetGloballyQualifiedName()
-            )}}
+            )}},
+                {{EmitCompletionProvider(option.CompletionProviderType)}}
             )
             """;
     }

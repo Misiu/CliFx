@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using CliFx.Binding;
 
 namespace CliFx;
@@ -9,7 +10,9 @@ namespace CliFx;
 public class CommandLineApplicationConfiguration(
     IReadOnlyList<CommandDescriptor> commands,
     string? debugModeEnvironmentVariable,
-    string? previewModeEnvironmentVariable
+    string? previewModeEnvironmentVariable,
+    bool isCompletionEnabled = false,
+    TimeSpan? completionTimeout = null
 )
 {
     /// <summary>
@@ -26,4 +29,14 @@ public class CommandLineApplicationConfiguration(
     /// Environment variable that enables the preview mode.
     /// </summary>
     public string? PreviewModeEnvironmentVariable { get; } = previewModeEnvironmentVariable;
+
+    /// <summary>
+    /// Whether shell completion is enabled.
+    /// </summary>
+    public bool IsCompletionEnabled { get; } = isCompletionEnabled;
+
+    /// <summary>
+    /// Maximum amount of time that the application can spend on calculating suggestions.
+    /// </summary>
+    public TimeSpan CompletionTimeout { get; } = completionTimeout ?? TimeSpan.FromSeconds(3);
 }

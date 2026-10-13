@@ -11,6 +11,7 @@
   <Project Path="CliFx/CliFx.csproj" />
   <Project Path="CliFx.Benchmarks/CliFx.Benchmarks.csproj" />
   <Project Path="CliFx.Demo/CliFx.Demo.csproj" />
+  <Project Path="CliFx.Demo.Fleet/CliFx.Demo.Fleet.csproj" />
   <Project Path="CliFx.Generators/CliFx.Generators.csproj" />
   <Project Path="CliFx.Tests.Dummy/CliFx.Tests.Dummy.csproj" />
   <Project Path="CliFx.Tests/CliFx.Tests.csproj" />

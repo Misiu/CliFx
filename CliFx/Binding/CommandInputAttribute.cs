@@ -1,5 +1,6 @@
 using System;
 using CliFx.Activation;
+using CliFx.Completion;
 
 namespace CliFx.Binding;
 
@@ -44,4 +45,19 @@ public abstract class CommandInputAttribute : Attribute
     /// </para>
     /// </remarks>
     public Type[] Validators { get; set; } = [];
+
+    /// <summary>
+    /// Custom provider of shell completion suggestions for the value of this input.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If left unset, suggestions are inferred from the input type where possible (e.g., enum members).
+    /// </para>
+    /// <para>
+    /// Providers must implement <see cref="ICompletionProvider" /> and are instantiated through
+    /// the configured <see cref="Infrastructure.ITypeInstantiator" />, so they can use
+    /// dependency injection.
+    /// </para>
+    /// </remarks>
+    public Type? CompletionProvider { get; set; }
 }

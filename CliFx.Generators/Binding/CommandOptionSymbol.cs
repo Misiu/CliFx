@@ -17,8 +17,17 @@ internal partial record CommandOptionSymbol(
     bool IsRequired,
     string? Description,
     INamedTypeSymbol? ConverterType,
-    IReadOnlyList<INamedTypeSymbol> ValidatorTypes
-) : CommandInputSymbol(Property, IsRequired, Description, ConverterType, ValidatorTypes)
+    IReadOnlyList<INamedTypeSymbol> ValidatorTypes,
+    INamedTypeSymbol? CompletionProviderType
+)
+    : CommandInputSymbol(
+        Property,
+        IsRequired,
+        Description,
+        ConverterType,
+        ValidatorTypes,
+        CompletionProviderType
+    )
 {
     internal string ToString(bool includeKind, bool includeValue)
     {
@@ -129,7 +138,8 @@ internal partial record CommandOptionSymbol
             property.IsRequired,
             description,
             TryResolveConverterType(attribute),
-            ResolveValidatorTypes(attribute)
+            ResolveValidatorTypes(attribute),
+            TryResolveCompletionProviderType(attribute, property, diagnostics)
         );
     }
 
